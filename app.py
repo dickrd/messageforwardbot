@@ -10,6 +10,10 @@ config = {
     'telegram_bot_token': '563612637:AAGCKFEoCm_zcye9AEVXyQFF1Otikajmils'
 }
 
+import logging
+logging.basicConfig(format='[%(asctime)s - %(name)s - %(levelname)s]\t%(message)s',
+                    level=logging.INFO)
+
 @itchat.msg_register(itchat.content.TEXT, isGroupChat=False, isFriendChat=True)
 def wechat_forward_text(msg):
     if config['telegram_chat_id'] == -1:
@@ -30,7 +34,7 @@ def telegram_forward_reply(bot, update):
     recipient = itchat.search_friends(userName=contents[0])[0]
     recipient.send(text=contents[1])
 
-itchat.auto_login(hotReload=True, enableCmdQR=True)
+itchat.auto_login(hotReload=True, enableCmdQR=2)
 itchat_thread = threading.Thread(target=itchat.run)
 
 
