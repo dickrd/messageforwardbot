@@ -22,7 +22,7 @@ def wechat_forward_text(msg):
     keyboard = [[InlineKeyboardButton("Reply", switch_inline_query_current_chat=msg['FromUserName'])]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     updater.bot.send_message(chat_id=config['telegram_chat_id'],
-                             text='{0}: \n{1}'.format(msg['FromUserName'], msg['Text']),
+                             text='{0}: \n{1}'.format(msg['ActualNickName'].encode('utf-8'), msg['Text'].encode('utf-8')),
                              reply_markup=reply_markup)
 
 def telegram_register(bot, update):
@@ -31,8 +31,7 @@ def telegram_register(bot, update):
 
 def telegram_forward_reply(bot, update):
     contents = update.message.text.split(' ', 1)
-    recipient = itchat.search_friends(userName=contents[0])[0]
-    recipient.send(text=contents[1])
+    itchat.send(contents[1], contents[0])
 
 itchat.auto_login(hotReload=True, enableCmdQR=2)
 itchat_thread = threading.Thread(target=itchat.run)
