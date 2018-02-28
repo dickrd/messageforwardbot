@@ -30,7 +30,7 @@ def telegram_register(bot, update):
     bot.send_message(chat_id=update.message.chat_id, text="Auth completed.")
 
 def telegram_forward_reply(bot, update):
-    contents = update.message.text.split(' ', maxsplit=2)
+    contents = update.message.text.split(' ', 1)
     recipient = itchat.search_friends(userName=contents[0])[0]
     recipient.send(text=contents[1])
 
@@ -39,10 +39,10 @@ itchat_thread = threading.Thread(target=itchat.run)
 
 
 updater = Updater(token=config['telegram_bot_token'])
-reply_handler = MessageHandler(Filters.all, telegram_forward_reply)
 start_handler = CommandHandler('0x3c1f', telegram_register)
-updater.dispatcher.add_handler(reply_handler)
 updater.dispatcher.add_handler(start_handler)
+reply_handler = MessageHandler(Filters.all, telegram_forward_reply)
+updater.dispatcher.add_handler(reply_handler)
 telegram_thread = threading.Thread(target=updater.start_polling)
 
 itchat_thread.start()
