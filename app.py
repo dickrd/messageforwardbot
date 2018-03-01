@@ -39,22 +39,23 @@ def wechat_forward_text(msg):
     else:
         name = msg['User']['UserName'].encode('utf-8')
 
-    if 'Content' in msg and len(msg['Content']) > 0:
-        content = msg['Content'].encode('utf-8')
+    if msg.type != itchat.content.TEXT:
+        content = msg.type
     else:
-        print('No content from wechat.\n----DUMP----\n{0}\n----END----'.format(msg))
-        return
+        content = msg['Content'].encode('utf-8')
 
     keyboard = [[InlineKeyboardButton("Reply", switch_inline_query_current_chat='@' + name + ' ')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     updater.bot.send_message(chat_id=config['telegram_chat_id'],
-                             text='[{0}]\n{1}'.format(name, content),
+                             text='`{0}`{1}'.format(name, content),
+                             parse_mode='Markdown',
                              reply_markup=reply_markup)
 
 def telegram_register(bot, update):
     if config['telegram_chat_id'] != -1:
         bot.send_message(chat_id=config['telegram_chat_id'],
-                         text="[Disconnected]")
+                         parse_mode='Markdown',
+                         text="`Disconnected`")
 
     config['telegram_chat_id'] = update.message.chat_id
     try:
@@ -64,7 +65,8 @@ def telegram_register(bot, update):
         print('Write config.json failed.')
 
     bot.send_message(chat_id=update.message.chat_id,
-                     text="[Connected]")
+                     parse_mode='Markdown',
+                     text="`Connected`")
 
 def telegram_forward_text(bot, update):
     text = update.message.text[1:]
@@ -74,7 +76,8 @@ def telegram_forward_text(bot, update):
     contents = text.split(' ', 1)
     if len(contents) != 2:
         bot.send_message(chat_id=update.message.chat_id,
-                         text="[Incompatible Message({0})]".format(len(contents)))
+                         parse_mode='Markdown',
+                         text="`Incompatible Message({0})`".format(len(contents)))
         return
 
     friend = itchat.search_friends(name=contents[0])
@@ -82,7 +85,8 @@ def telegram_forward_text(bot, update):
         friend[0].send(contents[1])
     else:
         bot.send_message(chat_id=update.message.chat_id,
-                         text="[Unspecific Recipient({0})]".format(len(friend)))
+                         parse_mode='Markdown',
+                         text="`Unspecific Recipient({0})`".format(len(friend)))
 
 itchat.auto_login(hotReload=True, enableCmdQR=2)
 itchat_thread = threading.Thread(target=itchat.run)
