@@ -1,7 +1,6 @@
 import threading
 
 import itchat
-import sys
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler
 from telegram.ext import MessageHandler, Filters
@@ -23,9 +22,9 @@ def wechat_forward_text(msg):
         return
 
     if 'User' not in msg:
-        print('No user in wechat message: {0}'.format(str(msg).encode('utf-8')))
+        print('No user in wechat message: {0}'.format(msg))
         return
-    if 'RemarkName' not in msg['User'] or len(msg['User']['RemarkName'] == 0):
+    if 'RemarkName' not in msg['User'] or len(msg['User']['RemarkName']) == 0:
         name = '@{0}'.format(msg['User']['NickName'].encode('utf-8'))
     else:
         name = '@{0}'.format((msg['User']['RemarkName'].encode('utf-8')))
@@ -69,13 +68,5 @@ reply_handler = MessageHandler(Filters.text, telegram_forward_text)
 updater.dispatcher.add_handler(reply_handler)
 telegram_thread = threading.Thread(target=updater.start_polling)
 
-try:
-    itchat_thread.start()
-    telegram_thread.start()
-    while itchat_thread.is_alive() and telegram_thread.is_alive():
-        itchat_thread.join(500)
-        telegram_thread.join(500)
-except KeyboardInterrupt:
-    print('Exiting...')
-
-sys.exit()
+itchat_thread.start()
+telegram_thread.start()
