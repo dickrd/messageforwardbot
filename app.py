@@ -44,7 +44,7 @@ def wechat_forward_text(msg):
     else:
         content = msg['Content'].encode('utf-8')
 
-    keyboard = [[InlineKeyboardButton("Reply", switch_inline_query_current_chat='@' + name + ' ')]]
+    keyboard = [[InlineKeyboardButton("Reply", switch_inline_query_current_chat='@' + name + '\n')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     updater.bot.send_message(chat_id=config['telegram_chat_id'],
                              parse_mode='Markdown',
@@ -73,7 +73,7 @@ def telegram_forward_text(bot, update):
     if text.startswith(config['telegram_bot_prefix']):
         text = text[len(config['telegram_bot_prefix']):]
 
-    contents = text.split(' ', 1)
+    contents = text.split('\n', 1)
     if len(contents) != 2:
         bot.send_message(chat_id=update.message.chat_id,
                          parse_mode='Markdown',
