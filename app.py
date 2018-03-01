@@ -64,11 +64,17 @@ def telegram_register(bot, update):
     except IOError:
         print('Write config.json failed.')
 
-    bot.send_message(chat_id=update.message.chat_id,
+    bot.send_message(chat_id=config['telegram_chat_id'],
                      parse_mode='Markdown',
                      text="`[Connected]`")
 
 def telegram_forward_text(bot, update):
+    if update.message.chat_id != config['telegram_chat_id']:
+        bot.send_message(chat_id=update.message.chat_id,
+                         parse_mode='Markdown',
+                         text="`[Not Connected]`")
+        return
+
     text = update.message.text[1:]
     if text.startswith(config['telegram_bot_prefix']):
         text = text[len(config['telegram_bot_prefix']):]
