@@ -18,7 +18,7 @@ def wechat_forward_text(msg):
         return
 
     if 'User' not in msg:
-        print('No user from wechat: {0}'.format(msg))
+        print('No user from wechat.\n----DUMP----\n{0}\n----END----'.format(msg))
         return
     if 'RemarkName' in msg['User'] and len(msg['User']['RemarkName']) > 0:
         name = '@{0}'.format((msg['User']['RemarkName'].encode('utf-8')))
@@ -30,7 +30,7 @@ def wechat_forward_text(msg):
     if 'Content' in msg and len(msg['Content']) > 0:
         content = msg['Content'].encode('utf-8')
     else:
-        print('No content from wechat: {0}'.format(msg))
+        print('No content from wechat.\n----DUMP----\n{0}\n----END----'.format(msg))
         return
 
     keyboard = [[InlineKeyboardButton("Reply", switch_inline_query_current_chat=name + ' ')]]
