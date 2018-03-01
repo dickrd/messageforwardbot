@@ -1,3 +1,4 @@
+import json
 import threading
 
 import itchat
@@ -5,11 +6,18 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler
 from telegram.ext import MessageHandler, Filters
 
-config = {
-    'telegram_bot_prefix': 'MessageForwardBot @',
-    'telegram_chat_id': -1,
-    'telegram_bot_token': '563612637:AAGCKFEoCm_zcye9AEVXyQFF1Otikajmils'
-}
+config = None
+try:
+    with open('config.json', 'r') as config_file:
+        config = json.load(config_file)
+
+    if 'telegram_bot_prefix' not in config \
+            or 'telegram_bot_token' not in config \
+            or 'telegram_chat_id' not in config:
+        raise IOError
+except IOError:
+    print('Read config.json failed.')
+    exit(-1)
 
 @itchat.msg_register(itchat.content.INCOME_MSG, isFriendChat=True)
 def wechat_forward_text(msg):
@@ -25,11 +33,11 @@ def wechat_forward_text(msg):
         return
 
     if 'RemarkName' in msg['User'] and len(msg['User']['RemarkName']) > 0:
-        name = '@{0}'.format((msg['User']['RemarkName'].encode('utf-8')))
+        name = msg['User']['RemarkName'].encode('utf-8')
     elif 'NickName' in msg['User'] and len(msg['User']['NickName']) >= 0:
-        name = '@{0}'.format(msg['User']['NickName'].encode('utf-8'))
+        name = msg['User']['NickName'].encode('utf-8')
     else:
-        name = '@{0}'.format(msg['User']['UserName'].encode('utf-8'))
+        name = msg['User']['UserName'].encode('utf-8')
 
     if 'Content' in msg and len(msg['Content']) > 0:
         content = msg['Content'].encode('utf-8')
@@ -37,10 +45,10 @@ def wechat_forward_text(msg):
         print('No content from wechat.\n----DUMP----\n{0}\n----END----'.format(msg))
         return
 
-    keyboard = [[InlineKeyboardButton("Reply", switch_inline_query_current_chat=name + ' ')]]
+    keyboard = [[InlineKeyboardButton("Reply", switch_inline_query_current_chat='@' + name + ' ')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     updater.bot.send_message(chat_id=config['telegram_chat_id'],
-                             text='{0}\n{1}'.format(name, content),
+                             text='[{0}]\n{1}'.format(name, content),
                              reply_markup=reply_markup)
 
 def telegram_register(bot, update):
@@ -49,6 +57,12 @@ def telegram_register(bot, update):
                          text="[Disconnected]")
 
     config['telegram_chat_id'] = update.message.chat_id
+    try:
+        with open('config.json', 'w') as the_config_file:
+            json.dump(config, the_config_file)
+    except IOError:
+        print('Write config.json failed.')
+
     bot.send_message(chat_id=update.message.chat_id,
                      text="[Connected]")
 
