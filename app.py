@@ -7,6 +7,7 @@ from telegram.ext import Updater, CommandHandler
 from telegram.ext import MessageHandler, Filters
 
 config = {
+    'telegram_bot_prefix': 'MessageForwardBot @',
     'telegram_chat_id': -1,
     'telegram_bot_token': '563612637:AAGCKFEoCm_zcye9AEVXyQFF1Otikajmils'
 }
@@ -27,7 +28,7 @@ def wechat_forward_text(msg):
     keyboard = [[InlineKeyboardButton("Reply", switch_inline_query_current_chat=name + ' ')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     updater.bot.send_message(chat_id=config['telegram_chat_id'],
-                             text='{0}\n{1}'.format(name, msg['Text'].encode('utf-8')),
+                             text='{0}\n{1}'.format(name, str(msg['Text']).encode('utf-8')),
                              reply_markup=reply_markup)
 
 def telegram_register(bot, update):
@@ -36,9 +37,14 @@ def telegram_register(bot, update):
                      text="[Initialization Completed]")
 
 def telegram_forward_text(bot, update):
-    print(update.message.text)
-    contents = update.message.text.split(' ', 1)
+    text = update.message.text[1:]
+    if text.startswith(config['telegram_bot_prefix']):
+        text = text[len(config['telegram_bot_prefix']):]
+
+    contents = text.split(' ', 1)
     if len(contents) != 2:
+        bot.send_message(chat_id=update.message.chat_id,
+                         text="[Incompatible Message({0})]".format(len(contents)))
         return
 
     friend = itchat.search_friends(name=contents[0])
@@ -64,7 +70,7 @@ try:
     while itchat_thread.is_alive() and telegram_thread.is_alive():
         itchat_thread.join(500)
         telegram_thread.join(500)
-except (KeyboardInterrupt, SystemExit):
+except KeyboardInterrupt:
     print('Exiting...')
-finally:
-    sys.exit()
+
+sys.exit()
