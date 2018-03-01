@@ -40,14 +40,14 @@ def wechat_forward_text(msg):
         name = msg['User']['UserName'].encode('utf-8')
 
     if msg.type != itchat.content.TEXT:
-        content = msg.type
+        content = '[{0}]'.format(msg.type)
     else:
         content = msg['Content'].encode('utf-8')
 
     keyboard = [[InlineKeyboardButton("Reply", switch_inline_query_current_chat='@' + name + ' ')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     updater.bot.send_message(chat_id=config['telegram_chat_id'],
-                             text='`{0}`{1}'.format(name, content),
+                             text='_{0}_\n\n{1}'.format(name, content),
                              parse_mode='Markdown',
                              reply_markup=reply_markup)
 
@@ -55,7 +55,7 @@ def telegram_register(bot, update):
     if config['telegram_chat_id'] != -1:
         bot.send_message(chat_id=config['telegram_chat_id'],
                          parse_mode='Markdown',
-                         text="`Disconnected`")
+                         text="_Disconnected_")
 
     config['telegram_chat_id'] = update.message.chat_id
     try:
@@ -66,7 +66,7 @@ def telegram_register(bot, update):
 
     bot.send_message(chat_id=update.message.chat_id,
                      parse_mode='Markdown',
-                     text="`Connected`")
+                     text="_Connected_")
 
 def telegram_forward_text(bot, update):
     text = update.message.text[1:]
@@ -77,7 +77,7 @@ def telegram_forward_text(bot, update):
     if len(contents) != 2:
         bot.send_message(chat_id=update.message.chat_id,
                          parse_mode='Markdown',
-                         text="`Incompatible Message({0})`".format(len(contents)))
+                         text="_Incompatible Message({0})_".format(len(contents)))
         return
 
     friend = itchat.search_friends(name=contents[0])
@@ -86,7 +86,7 @@ def telegram_forward_text(bot, update):
     else:
         bot.send_message(chat_id=update.message.chat_id,
                          parse_mode='Markdown',
-                         text="`Unspecific Recipient({0})`".format(len(friend)))
+                         text="_Unspecific Recipient({0})_".format(len(friend)))
 
 itchat.auto_login(hotReload=True, enableCmdQR=2)
 itchat_thread = threading.Thread(target=itchat.run)
