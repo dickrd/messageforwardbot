@@ -11,10 +11,6 @@ config = {
     'telegram_bot_token': '563612637:AAGCKFEoCm_zcye9AEVXyQFF1Otikajmils'
 }
 
-import logging
-logging.basicConfig(format='[%(asctime)s - %(name)s - %(levelname)s]\t%(message)s',
-                    level=logging.ERROR)
-
 @itchat.msg_register(itchat.content.INCOME_MSG, isGroupChat=False)
 def wechat_forward_text(msg):
     if config['telegram_chat_id'] == -1:
@@ -22,7 +18,7 @@ def wechat_forward_text(msg):
         return
 
     if 'User' not in msg:
-        print('No user in wechat message: {0}'.format(msg))
+        print('No user from wechat: {0}'.format(msg))
         return
     if 'RemarkName' in msg['User'] and len(msg['User']['RemarkName']) > 0:
         name = '@{0}'.format((msg['User']['RemarkName'].encode('utf-8')))
@@ -31,10 +27,16 @@ def wechat_forward_text(msg):
     else:
         name = '@{0}'.format(msg['User']['UserName'].encode('utf-8'))
 
+    if 'Content' in msg and len(msg['Content']) > 0:
+        content = msg['Content'].encode('utf-8')
+    else:
+        print('No content from wechat: {0}'.format(msg))
+        return
+
     keyboard = [[InlineKeyboardButton("Reply", switch_inline_query_current_chat=name + ' ')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     updater.bot.send_message(chat_id=config['telegram_chat_id'],
-                             text='{0}\n{1}'.format(name, msg['Content'].encode('utf-8')),
+                             text='{0}\n{1}'.format(name, content),
                              reply_markup=reply_markup)
 
 def telegram_register(bot, update):
