@@ -11,15 +11,19 @@ config = {
     'telegram_bot_token': '563612637:AAGCKFEoCm_zcye9AEVXyQFF1Otikajmils'
 }
 
-@itchat.msg_register(itchat.content.INCOME_MSG, isGroupChat=False)
+@itchat.msg_register(itchat.content.INCOME_MSG, isFriendChat=True)
 def wechat_forward_text(msg):
     if config['telegram_chat_id'] == -1:
         print('Telegram not ready.')
         return
 
-    if 'User' not in msg:
+    if 'User' not in msg or 'FromUserName' not in msg:
         print('No user from wechat.\n----DUMP----\n{0}\n----END----'.format(msg))
         return
+    if msg['FromUserName'] == itchat.search_friends()['UserName']:
+        print('Skip wechat message sent by self.')
+        return
+
     if 'RemarkName' in msg['User'] and len(msg['User']['RemarkName']) > 0:
         name = '@{0}'.format((msg['User']['RemarkName'].encode('utf-8')))
     elif 'NickName' in msg['User'] and len(msg['User']['NickName']) >= 0:
@@ -40,9 +44,13 @@ def wechat_forward_text(msg):
                              reply_markup=reply_markup)
 
 def telegram_register(bot, update):
+    if config['telegram_chat_id'] != -1:
+        bot.send_message(chat_id=config['telegram_chat_id'],
+                         text="[Disconnected]")
+
     config['telegram_chat_id'] = update.message.chat_id
     bot.send_message(chat_id=update.message.chat_id,
-                     text="[Initialization Completed]")
+                     text="[Connected]")
 
 def telegram_forward_text(bot, update):
     text = update.message.text[1:]
