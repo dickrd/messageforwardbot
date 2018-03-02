@@ -5,6 +5,7 @@ import itchat
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler
 from telegram.ext import MessageHandler, Filters
+from telegram.utils import helpers
 
 config = None
 try:
@@ -42,7 +43,7 @@ def wechat_forward_text(msg):
     if msg.type != itchat.content.TEXT:
         content = '[{0}]'.format(msg.type)
     else:
-        content = msg['Content'].encode('utf-8')
+        content = helpers.escape_markdown(msg['Content'].encode('utf-8'))
 
     keyboard = [[InlineKeyboardButton("Reply", switch_inline_query_current_chat='@' + name + '\n')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
