@@ -41,7 +41,7 @@ def wechat_forward_text(msg):
         name = msg['User']['UserName'].encode('utf-8')
 
     if msg.type != itchat.content.TEXT:
-        content = '[{0}]'.format(msg.type)
+        content = helpers.escape_markdown('[{0}]'.format(msg.type))
     else:
         content = helpers.escape_markdown(msg['Content'].encode('utf-8'))
 
