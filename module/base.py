@@ -17,6 +17,9 @@ class Friend(object):
         else:
             return False
 
+    def __ne__(self, o):
+        return not self.__eq__(o)
+
     def __hash__(self):
         return hash((self.service, self.channel))
 

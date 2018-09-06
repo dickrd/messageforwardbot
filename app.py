@@ -5,8 +5,9 @@ from bot_telegram import TelegramBot
 
 def _main():
     db_path = "message.db"
-    base_url = "https://bot.hehehey.com/file/{0}"
-    cursor = sqlite3.connect(db_path).cursor()
+    base_url = "https://bot.hehehey.com/{0}"
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
 
     cursor.execute("select count(*) from sqlite_master where type='table' and name='config';")
     if cursor.fetchone()[0] == 0:
@@ -27,11 +28,13 @@ def _main():
                        "  name      text,"
                        "  primary key (friend_id autoincrement)"
                        ");")
-        cursor.executeMany("insert into config(key, value) values (?, ?)",
-                           [("claim_secret", secret),
-                            ("telegram_token", token),
-                            ("telegram_chat_id", "-1")])
-        cursor.commit()
+        for item in [("claim_secret", secret), ("telegram_token", token), ("telegram_chat_id", "-1")]:
+            cursor.execute("insert into config(key, value) values (?, ?);", item)
+        cursor.execute("replace into friend(service, name, channel) values(?, ?, ?);", ("system", "system", "system"))
+        connection.commit()
+        connection.close()
     print("==> starting bot...")
-    bot = TelegramBot(cursor, base_url, ["wechat"])
+    bot = TelegramBot(db_path, base_url, ["wechat"])
     bot.start()
+
+_main()
