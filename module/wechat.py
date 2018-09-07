@@ -32,8 +32,7 @@ class WechatModule(Module):
         friend_list = []
         for friend in friends:
             the_friend = WechatFriend(friend)
-            if not self.bot.is_conflict("wechat", the_friend.channel):
-                friend_list.append(("wechat", the_friend.name, the_friend.channel))
+            friend_list.append(("wechat", the_friend.name, the_friend.channel))
         self.bot.update_friend_list(friend_list)
         Thread(target=itchat.run).start()
 

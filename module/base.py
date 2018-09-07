@@ -1,7 +1,7 @@
 class Module(object):
     def login(self):
         raise NotImplementedError()
-    def get_friend(self, friend_id):
+    def get_friend(self, channel):
         raise NotImplementedError()
 
 class Friend(object):

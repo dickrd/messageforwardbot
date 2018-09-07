@@ -30,7 +30,6 @@ def _main():
                        ");")
         for item in [("claim_secret", secret), ("telegram_token", token), ("telegram_chat_id", "-1")]:
             cursor.execute("insert into config(key, value) values (?, ?);", item)
-        cursor.execute("replace into friend(service, name, channel) values(?, ?, ?);", ("system", "system", "system"))
         connection.commit()
         connection.close()
     print("==> starting bot...")
