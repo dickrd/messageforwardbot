@@ -221,7 +221,7 @@ class TelegramBot(object):
 
             bot.send_message(chat_id=update.message.chat_id,
                              parse_mode='Markdown',
-                             text=self.generate_text(System(), "{0}\n`will be send to:`".format(content)),
+                             text=self.generate_text(System(), "{0}\n`will be send to:`".format(content.encode('utf-8'))),
                              reply_markup=InlineKeyboardMarkup(keyboard))
         else:
             bot.send_message(chat_id=update.message.chat_id,
@@ -255,7 +255,7 @@ class TelegramBot(object):
             self.active_sender[friend] = int(round(time.time() * 1000))
 
             update.callback_query.edit_message_text(parse_mode='Markdown',
-                                                    text=self.generate_text(System(), "`sent {0}`".format(helpers.escape_markdown(row[2]))))
+                                                    text=self.generate_text(System(), "`sent {0}`".format(helpers.escape_markdown(row[2].encode('utf-8')))))
 
         update.callback_query.edit_message_reply_markup()
         update.callback_query.answer()
