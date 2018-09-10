@@ -69,6 +69,20 @@ class TelegramBot(object):
         self.updater.idle()
 
     def send(self, sender, message):
+        if sender.friend_id == -1:
+            connection = sqlite3.connect(self.db_path)
+            cursor = connection.cursor()
+            cursor.execute("select friend_id from friend where service = ? and name = ?;", (sender.service, sender.name))
+            row = cursor.fetchone()
+            if not row:
+                cursor.execute("insert into friend(service, name, channel) values(?, ?, ?);", (sender.service, sender.name, sender.channel))
+                connection.commit()
+                cursor.execute("select friend_id from friend where service = ? and name = ?;", (sender.service, sender.name))
+                row = cursor.fetchone()
+
+            sender.friend_id = row[0]
+            connection.close()
+
         self.active_sender[sender] = int(round(time.time() * 1000))
         self.updater.bot.send_message(chat_id=self.chat_id,
                                       parse_mode='Markdown',
@@ -142,6 +156,7 @@ class TelegramBot(object):
             return
 
         friend = self.service[row[0]].get_friend(row[1])
+        friend.friend_id = friend_id
         friend.send(lines[1])
         self.active_sender[friend] = int(round(time.time() * 1000))
 
@@ -235,6 +250,7 @@ class TelegramBot(object):
                 return
 
             friend = self.service[row[0]].get_friend(row[1])
+            friend.friend_id = friend_id
             friend.send(content)
             self.active_sender[friend] = int(round(time.time() * 1000))
 
