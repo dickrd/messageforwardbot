@@ -3,7 +3,7 @@ import sqlite3
 import time
 
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
 from telegram.utils import helpers
 
 from module.base import System
@@ -39,6 +39,7 @@ class TelegramBot(object):
         self.updater.dispatcher.add_handler(CommandHandler('claim', self.claim))
         self.updater.dispatcher.add_handler(CommandHandler('friends', self.friend_list))
         self.updater.dispatcher.add_handler(CommandHandler('to', self.to_friend))
+        self.updater.dispatcher.add_handler(CallbackQueryHandler(self.callback))
         self.updater.dispatcher.add_handler(MessageHandler(Filters.text, self.forward))
 
     def generate_text(self, sender, message):
@@ -59,7 +60,7 @@ class TelegramBot(object):
         if not self.last or sender != self.last or self.last_active + self.ttl < now:
             self.last = sender
             self.last_active = now
-            return "`{0}#{1:03}`\n{3}".format(sender.name.encode('utf-8'), sender.friend_id, sender.channel.encode('utf-8'), message)
+            return "`{0}#{1:04}`\n{3}".format(sender.name.encode('utf-8'), sender.friend_id, sender.channel.encode('utf-8'), message)
         else:
             return message
 
@@ -158,7 +159,7 @@ class TelegramBot(object):
         connection.close()
         message = ""
         for row in friends:
-            message += "{0:03}  {1}  {2}\n".format(row[0], row[1], row[2].encode('utf-8'))
+            message += "{0:04}  {1}  {2}\n".format(row[0], row[1], row[2].encode('utf-8'))
 
         message = self.generate_text(System(), helpers.escape_markdown(message))
 
@@ -182,41 +183,63 @@ class TelegramBot(object):
                              text=self.generate_text(System(), "`no claim`"))
             return
 
-        if update.message.reply_to_message:
-            parts = update.message.reply_to_message.text.split('\n', 1)
-            if len(parts) == 2:
-                # TODO implement forward
-                pass
+        content = update.message.text
+        current_active = {}
+        now = int(round(time.time() * 1000))
+        for sender in self.active_sender:
+            if self.active_sender[sender] + self.ttl > now:
+                current_active[sender] = self.active_sender[sender]
+        self.active_sender = current_active
+
+        if len(current_active) == 1:
+            for k in current_active:
+                k.send(content)
+                self.active_sender[k] = now
+
+        elif len(current_active) > 1:
+            keyboard = []
+            for k in current_active:
+                keyboard.append([InlineKeyboardButton("{0}#{1:03}".format(k.name.encode('utf-8'), k.friend_id),
+                                                      callback_data=str(k.friend_id))])
+
+            keyboard.append([InlineKeyboardButton("[cancel]", callback_data="-1")])
+
+            bot.send_message(chat_id=update.message.chat_id,
+                             parse_mode='Markdown',
+                             text=self.generate_text(System(), "{0}\n`will be send to:`".format(content)),
+                             reply_markup=InlineKeyboardMarkup(keyboard))
         else:
-            current_active = {}
-            now = int(round(time.time() * 1000))
-            for sender in self.active_sender:
-                if self.active_sender[sender] + self.ttl > now:
-                    current_active[sender] = self.active_sender[sender]
-            self.active_sender = current_active
+            bot.send_message(chat_id=update.message.chat_id,
+                             parse_mode='Markdown',
+                             text=self.generate_text(System(), "`no recipient`"))
 
-            if len(current_active) == 1:
-                for k in current_active:
-                    k.send(update.message.text)
-                    self.active_sender[k] = now
+    def callback(self, bot, update):
+        friend_id = int(update.callback_query.data)
+        if friend_id == -1:
+            update.callback_query.edit_message_text(parse_mode='Markdown',
+                             text=self.generate_text(System(), "`not sent`"))
+        else:
+            lines = update.callback_query.message.text.split('\n')
+            content = '\n'.join(lines[:-1])
 
-            elif len(current_active) > 1:
-                keyboard = []
-                count = 0
-                for k in current_active:
-                    if count > 3:
-                        break
-                    keyboard.append([InlineKeyboardButton("{0}#{1:03}".format(k.name.encode('utf-8'), k.friend_id),
-                                                          callback_data=str(k.friend_id))])
-                    count += 1
+            connection = sqlite3.connect(self.db_path)
+            cursor = connection.cursor()
+            cursor.execute("select service, channel, name from friend where friend_id == ?;", (friend_id,))
+            row = cursor.fetchone()
 
-                keyboard.append([InlineKeyboardButton("cancel", callback_data="-1")])
-
+            if not row:
                 bot.send_message(chat_id=update.message.chat_id,
                                  parse_mode='Markdown',
-                                 text=self.generate_text(System(), "`choose a recipient`"),
-                                 reply_markup=InlineKeyboardMarkup(keyboard))
-            else:
-                bot.send_message(chat_id=update.message.chat_id,
-                                 parse_mode='Markdown',
-                                 text=self.generate_text(System(), "`no recipient`"))
+                                 text=self.generate_text(System(), "`no friend with id: {0}`".format(friend_id)))
+                update.callback_query.answer()
+                return
+
+            friend = self.service[row[0]].get_friend(row[1])
+            friend.send(content)
+            self.active_sender[friend] = int(round(time.time() * 1000))
+
+            update.callback_query.edit_message_text(parse_mode='Markdown',
+                                                    text=self.generate_text(System(), "`sent {0}`".format(helpers.escape_markdown(row[2]))))
+
+        update.callback_query.edit_message_reply_markup()
+        update.callback_query.answer()

@@ -64,7 +64,11 @@ def forward(msg):
         file_path = os.path.join(wechat.file_path, "{0}{1}".format(int(round(time.time() * 1000)), ext))
         msg.download(file_path)
         content = wechat.bot.base_url.format(file_path)
+    elif msg.type in [MAP, SHARING]:
+        content = msg['Url']
+    elif msg.type in [TEXT]:
+        content = helpers.escape_markdown(msg['Content'].encode("utf-8"))
     else:
-        content = helpers.escape_markdown(msg['Content'].encode('utf-8'))
+        content = helpers.escape_markdown("[{0}]".format(msg.type))
 
     wechat.bot.send(wechat.get_friend(msg['FromUserName']), content)
