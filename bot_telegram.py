@@ -137,13 +137,6 @@ class TelegramBot(object):
                              text=self.generate_text(System(), "`syntax error\nusage:\n/to <friend_id>\n<message_body>`"))
             return
 
-        if len(lines) < 2:
-            bot.send_message(chat_id=update.message.chat_id,
-                             parse_mode='Markdown',
-                             text=self.generate_text(System(),
-                                                     "`no message body\nusage:\n/to <friend_id>\n<message_body>`"))
-            return
-
         connection = sqlite3.connect(self.db_path)
         cursor = connection.cursor()
         cursor.execute("select service, channel from friend where friend_id == ?;", (friend_id,))
@@ -157,7 +150,9 @@ class TelegramBot(object):
 
         friend = self.service[row[0]].get_friend(row[1])
         friend.friend_id = friend_id
-        friend.send(lines[1])
+
+        if len(lines) == 2:
+            friend.send(lines[1])
         self.active_sender[friend] = int(round(time.time() * 1000))
 
     def friend_list(self, bot, update):
@@ -255,7 +250,7 @@ class TelegramBot(object):
             self.active_sender[friend] = int(round(time.time() * 1000))
 
             update.callback_query.edit_message_text(parse_mode='Markdown',
-                                                    text=self.generate_text(System(), "`sent {0}`".format(helpers.escape_markdown(row[2].encode('utf-8')))))
+                                                    text=self.generate_text(System(), "`sent {0}#{1:04}`".format(helpers.escape_markdown(row[2].encode('utf-8')), friend_id)))
 
         update.callback_query.edit_message_reply_markup()
         update.callback_query.answer()
