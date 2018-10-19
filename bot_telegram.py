@@ -43,19 +43,36 @@ class TelegramBot(object):
         self.updater.dispatcher.add_handler(CallbackQueryHandler(self.callback))
         self.updater.dispatcher.add_handler(MessageHandler(Filters.text, self.forward))
 
-    def generate_text(self, sender, message):
-        if sender == System():
-            return message
-
-        if sender.friend_id == -1:
-            self.update_friend_list([(sender.service, sender.name, sender.channel)])
+    def _identify_friend_(self, friend):
+        """
+        identify a friend constructed by a module.
+        this will update friend database table if the friend does not has an friend_id.
+        a new friend_id is generated if necessary.
+        :param friend: the newly generated friend
+        :return: a friend object wih correct friend_id
+        """
+        if friend.friend_id == -1:
+            self.update_friend_list([(friend.service, friend.name, friend.channel)])
 
             connection = sqlite3.connect(self.db_path)
             cursor = connection.cursor()
             cursor.execute("select friend_id from friend where service = ? and channel = ?;",
-                                (sender.service, sender.channel))
-            sender.friend_id = int(cursor.fetchone()[0])
+                           (friend.service, friend.channel))
+            friend.friend_id = int(cursor.fetchone()[0])
             connection.close()
+        return friend
+
+    def _generate_text_(self, sender, message):
+        """
+        generate text content.
+        a header will be appended to result if it is the first time receiving messages from the sender in a long time.
+        :param sender: sender of this message
+        :param message: message content
+        :return: message formatted with header
+        """
+        if sender == System():
+            return message
+        sender = self._identify_friend_(sender)
 
         now = int(round(time.time() * 1000))
         if not self.last or sender != self.last or self.last_active + self.ttl < now:
@@ -70,34 +87,27 @@ class TelegramBot(object):
         self.updater.idle()
 
     def send(self, sender, message):
-        if sender.friend_id == -1:
-            connection = sqlite3.connect(self.db_path)
-            cursor = connection.cursor()
-            cursor.execute("select friend_id from friend where service = ? and name = ?;", (sender.service, sender.name))
-            row = cursor.fetchone()
-            if not row:
-                cursor.execute("insert into friend(service, name, channel) values(?, ?, ?);", (sender.service, sender.name, sender.channel))
-                connection.commit()
-                cursor.execute("select friend_id from friend where service = ? and name = ?;", (sender.service, sender.name))
-                row = cursor.fetchone()
-
-            sender.friend_id = row[0]
-            connection.close()
+        sender = self._identify_friend_(sender)
 
         if not sender in self.own_account:
             self.active_sender[sender] = int(round(time.time() * 1000))
         self.updater.bot.send_message(chat_id=self.chat_id,
                                       parse_mode='Markdown',
-                                      text=self.generate_text(sender, message))
+                                      text=self._generate_text_(sender, message))
 
     def login(self, service):
         if service == "wechat":
             self.service["wechat"] = WechatModule(self)
-            self.own_account.add(self.service["wechat"].login())
+            owner = self.service["wechat"].login()
+            self.own_account.add(self._identify_friend_(owner))
         else:
             print("unsupported service: {0}".format(service))
 
     def update_friend_list(self, friends):
+        """
+        updates friend database table.
+        :param friends: triplets list as (service, name, channel)
+        """
         connection = sqlite3.connect(self.db_path)
         cursor = connection.cursor()
         for item in friends:
@@ -128,11 +138,11 @@ class TelegramBot(object):
             self.chat_id = update.message.chat_id
             bot.send_message(chat_id=update.message.chat_id,
                              parse_mode='Markdown',
-                             text=self.generate_text(System(), "`claim successful`"))
+                             text=self._generate_text_(System(), "`claim successful`"))
         else:
             bot.send_message(chat_id=update.message.chat_id,
                              parse_mode='Markdown',
-                             text=self.generate_text(System(), "`claim failed\nusage:\n/claim <secret>`"))
+                             text=self._generate_text_(System(), "`claim failed\nusage:\n/claim <secret>`"))
 
     def to_friend(self, bot, update):
         lines = update.message.text.split("\n", 1)
@@ -142,7 +152,7 @@ class TelegramBot(object):
         except Exception:
             bot.send_message(chat_id=update.message.chat_id,
                              parse_mode='Markdown',
-                             text=self.generate_text(System(), "`syntax error\nusage:\n/to <friend_id>\n<message_body>`"))
+                             text=self._generate_text_(System(), "`syntax error\nusage:\n/to <friend_id>\n<message_body>`"))
             return
 
         connection = sqlite3.connect(self.db_path)
@@ -153,7 +163,7 @@ class TelegramBot(object):
         if not row:
             bot.send_message(chat_id=update.message.chat_id,
                              parse_mode='Markdown',
-                             text=self.generate_text(System(), "`no friend with id: {0}`".format(friend_id)))
+                             text=self._generate_text_(System(), "`no friend with id: {0}`".format(friend_id)))
             return
 
         friend = self.service[row[0]].get_friend(row[1])
@@ -167,7 +177,7 @@ class TelegramBot(object):
         if update.message.chat_id != self.chat_id:
             bot.send_message(chat_id=update.message.chat_id,
                              parse_mode='Markdown',
-                             text=self.generate_text(System(), "`no claim`"))
+                             text=self._generate_text_(System(), "`no claim`"))
             return
 
         connection = sqlite3.connect(self.db_path)
@@ -179,7 +189,7 @@ class TelegramBot(object):
         for row in friends:
             message += "{0:04}  {1}  {2}\n".format(row[0], row[1], row[2].encode('utf-8'))
 
-        message = self.generate_text(System(), helpers.escape_markdown(message))
+        message = self._generate_text_(System(), helpers.escape_markdown(message))
 
         buf = ""
         for line in message.split("\n"):
@@ -198,7 +208,7 @@ class TelegramBot(object):
         if update.message.chat_id != self.chat_id:
             bot.send_message(chat_id=update.message.chat_id,
                              parse_mode='Markdown',
-                             text=self.generate_text(System(), "`no claim`"))
+                             text=self._generate_text_(System(), "`no claim`"))
             return
 
         content = update.message.text
@@ -224,18 +234,18 @@ class TelegramBot(object):
 
             bot.send_message(chat_id=update.message.chat_id,
                              parse_mode='Markdown',
-                             text=self.generate_text(System(), "{0}\n`will be send to:`".format(content.encode('utf-8'))),
+                             text=self._generate_text_(System(), "{0}\n`will be send to:`".format(content.encode('utf-8'))),
                              reply_markup=InlineKeyboardMarkup(keyboard))
         else:
             bot.send_message(chat_id=update.message.chat_id,
                              parse_mode='Markdown',
-                             text=self.generate_text(System(), "`no recipient`"))
+                             text=self._generate_text_(System(), "`no recipient`"))
 
     def callback(self, bot, update):
         friend_id = int(update.callback_query.data)
         if friend_id == -1:
             update.callback_query.edit_message_text(parse_mode='Markdown',
-                             text=self.generate_text(System(), "`not sent`"))
+                                                    text=self._generate_text_(System(), "`not sent`"))
         else:
             lines = update.callback_query.message.text.split('\n')
             content = '\n'.join(lines[:-1])
@@ -248,7 +258,7 @@ class TelegramBot(object):
             if not row:
                 bot.send_message(chat_id=update.message.chat_id,
                                  parse_mode='Markdown',
-                                 text=self.generate_text(System(), "`no friend with id: {0}`".format(friend_id)))
+                                 text=self._generate_text_(System(), "`no friend with id: {0}`".format(friend_id)))
                 update.callback_query.answer()
                 return
 
@@ -258,7 +268,7 @@ class TelegramBot(object):
             self.active_sender[friend] = int(round(time.time() * 1000))
 
             update.callback_query.edit_message_text(parse_mode='Markdown',
-                                                    text=self.generate_text(System(), "`sent {0}#{1:04}`".format(helpers.escape_markdown(row[2].encode('utf-8')), friend_id)))
+                                                    text=self._generate_text_(System(), "`sent {0}#{1:04}`".format(helpers.escape_markdown(row[2].encode('utf-8')), friend_id)))
 
         update.callback_query.edit_message_reply_markup()
         update.callback_query.answer()

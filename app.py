@@ -5,7 +5,7 @@ from bot_telegram import TelegramBot
 
 def _main():
     db_path = "message.db"
-    base_url = "https://bot.hehehey.com/{0}"
+    base_url = "http://bot.hehehey.com/{0}"
     connection = sqlite3.connect(db_path)
     cursor = connection.cursor()
 

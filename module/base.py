@@ -22,7 +22,7 @@ class Friend(object):
 
     def __eq__(self, o):
         if isinstance(o, self.__class__):
-            return (self.service == o.service and self.name == o.name) or (self.service == o.service and self.channel == o.channel)
+            return self.friend_id == o.friend_id
         else:
             return False
 
