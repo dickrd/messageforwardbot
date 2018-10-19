@@ -13,7 +13,7 @@ class Friend(object):
 
     def __eq__(self, o):
         if isinstance(o, self.__class__):
-            return self.service == o.service and self.name == o.name
+            return (self.service == o.service and self.name == o.name) or (self.service == o.service and self.channel == o.channel)
         else:
             return False
 
@@ -21,7 +21,7 @@ class Friend(object):
         return not self.__eq__(o)
 
     def __hash__(self):
-        return hash((self.service, self.name))
+        return hash(self.friend_id)
 
     def send(self, message):
         raise NotImplementedError()

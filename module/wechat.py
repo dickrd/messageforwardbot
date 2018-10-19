@@ -35,6 +35,7 @@ class WechatModule(Module):
             friend_list.append(("wechat", the_friend.name, the_friend.channel))
         self.bot.update_friend_list(friend_list)
         Thread(target=itchat.run).start()
+        return WechatFriend(itchat.search_friends())
 
     def get_friend(self, channel):
         return WechatFriend(itchat.search_friends(userName=channel))

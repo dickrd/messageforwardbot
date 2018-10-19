@@ -21,6 +21,7 @@ class TelegramBot(object):
         self.last = None
         self.last_active = None
         self.active_sender = {}
+        self.own_account = set()
 
         self.service = {}
         for service in service_list:
@@ -83,7 +84,8 @@ class TelegramBot(object):
             sender.friend_id = row[0]
             connection.close()
 
-        self.active_sender[sender] = int(round(time.time() * 1000))
+        if not sender in self.own_account:
+            self.active_sender[sender] = int(round(time.time() * 1000))
         self.updater.bot.send_message(chat_id=self.chat_id,
                                       parse_mode='Markdown',
                                       text=self.generate_text(sender, message))
@@ -91,7 +93,7 @@ class TelegramBot(object):
     def login(self, service):
         if service == "wechat":
             self.service["wechat"] = WechatModule(self)
-            self.service["wechat"].login()
+            self.own_account.add(self.service["wechat"].login())
         else:
             print("unsupported service: {0}".format(service))
 
@@ -102,8 +104,14 @@ class TelegramBot(object):
             cursor.execute("select count(*) from friend where service = ? and name = ?;", (item[0], item[1]))
             if cursor.fetchone()[0] > 0:
                 cursor.execute("update friend set channel = ? where service = ? and name = ?;", (item[2], item[0], item[1]))
-            else:
-                cursor.execute("insert into friend(service, name, channel) values(?, ?, ?);", item)
+                continue
+
+            cursor.execute("select count(*) from friend where service = ? and channel = ?;", (item[0], item[2]))
+            if cursor.fetchone()[0] > 0:
+                cursor.execute("update friend set name = ? where service = ? and channel = ?;", (item[1], item[0], item[2]))
+                continue
+
+            cursor.execute("insert into friend(service, name, channel) values(?, ?, ?);", item)
         connection.commit()
         connection.close()
 
