@@ -1,7 +1,16 @@
 class Module(object):
     def login(self):
+        """
+        login in this module.
+        :return: the account logged in as Friend object
+        """
         raise NotImplementedError()
     def get_friend(self, channel):
+        """
+        get a Friend object representing channel.
+        :param channel: object that can identify a friend inside this module
+        :return: the Friend object
+        """
         raise NotImplementedError()
 
 class Friend(object):
@@ -24,6 +33,11 @@ class Friend(object):
         return hash(self.friend_id)
 
     def send(self, message):
+        """
+        send message to this friend.
+        :param message: content to send
+        :return: None
+        """
         raise NotImplementedError()
 
 class System(Friend):
